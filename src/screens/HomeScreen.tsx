@@ -1,5 +1,6 @@
 import React, {useRef, useState} from 'react';
 import {
+  Dimensions,
   FlatList,
   ScrollView,
   StatusBar,
@@ -45,7 +46,7 @@ const getCoffeeList = (category: any, data: any) => {
   }
 };
 
-const HomeScreen = () => {
+const HomeScreen = ({navigation}: any) => {
   const coffeeList = useStore((state: any) => state.CoffeeList);
   const beanList = useStore((state: any) => state.BeanList);
   const [categories, setCategories] = useState(
@@ -59,6 +60,31 @@ const HomeScreen = () => {
   const [sortedCoffee, setSortedCoffee] = useState(
     getCoffeeList(categoryIndex.category, coffeeList),
   );
+
+  const searchCoffee = (search: string) => {
+    if (search != '') {
+      ListRef?.current?.scrollToOffset({
+        animated: true,
+        offset: 0,
+      });
+      setCategoryIndex({index: 0, category: categories[0]});
+      setSortedCoffee([
+        ...coffeeList.filter((item: any) =>
+          item.name.toLowerCase().includes(search.toLowerCase()),
+        ),
+      ]);
+    }
+  };
+
+  const resetSearchCoffee = () => {
+    ListRef?.current?.scrollToOffset({
+      animated: true,
+      offset: 0,
+    });
+    setCategoryIndex({index: 0, category: categories[0]});
+    setSortedCoffee([...coffeeList]);
+    setSearchText('');
+  };
 
   const ListRef: any = useRef<FlatList>();
   const tabBarHeight = useBottomTabBarHeight();
@@ -78,7 +104,10 @@ const HomeScreen = () => {
 
         {/* ---------Search Input--------- */}
         <View style={styles.inputContainerComponent}>
-          <TouchableOpacity onPress={() => {}}>
+          <TouchableOpacity
+            onPress={() => {
+              searchCoffee(searchText);
+            }}>
             <CustomIcon
               style={styles.inputIcon}
               name="search"
@@ -93,10 +122,28 @@ const HomeScreen = () => {
           <TextInput
             placeholder="Find your coffee..."
             value={searchText}
-            onChangeText={text => setSearchText(text)}
+            onChangeText={text => {
+              setSearchText(text);
+              searchCoffee(text);
+            }}
             placeholderTextColor={COLORS.primaryLightGreyHex}
             style={styles.textInputContainer}
           />
+          {searchText.length > 0 ? (
+            <TouchableOpacity
+              onPress={() => {
+                resetSearchCoffee();
+              }}>
+              <CustomIcon
+                name="close"
+                size={FONTSIZE.size_16}
+                color={COLORS.primaryLightGreyHex}
+                style={styles.inputIcon}
+              />
+            </TouchableOpacity>
+          ) : (
+            <></>
+          )}
         </View>
 
         {/* ---------Category Scroller--------- */}
@@ -144,13 +191,25 @@ const HomeScreen = () => {
         <FlatList
           ref={ListRef}
           horizontal
+          ListEmptyComponent={
+            <View style={styles.emptyListContainer}>
+              <Text style={styles.categoryText}>No Coffee Available!</Text>
+            </View>
+          }
           showsHorizontalScrollIndicator={false}
           data={sortedCoffee}
           contentContainerStyle={styles.flatListContainer}
           keyExtractor={item => item.id}
           renderItem={({item}) => {
             return (
-              <TouchableOpacity onPress={() => {}}>
+              <TouchableOpacity
+                onPress={() => {
+                  navigation.push('Details', {
+                    index: item.index,
+                    id: item.id,
+                    type: item.type,
+                  });
+                }}>
                 <CoffeeCard
                   id={item.id}
                   index={item.index}
@@ -182,7 +241,14 @@ const HomeScreen = () => {
           keyExtractor={item => item.id}
           renderItem={({item}) => {
             return (
-              <TouchableOpacity onPress={() => {}}>
+              <TouchableOpacity
+                onPress={() => {
+                  navigation.push('Details', {
+                    index: item.index,
+                    id: item.id,
+                    type: item.type,
+                  });
+                }}>
                 <CoffeeCard
                   id={item.id}
                   index={item.index}
@@ -249,6 +315,12 @@ const styles = StyleSheet.create({
     width: SPACING.space_10,
     borderRadius: BORDERRADIUS.radius_10,
     backgroundColor: COLORS.primaryOrangeHex,
+  },
+  emptyListContainer: {
+    width: Dimensions.get('window').width - SPACING.space_30 * 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.space_36 * 3.6,
   },
   categoryText: {
     fontFamily: FONTFAMILY.poppins_semibold,
